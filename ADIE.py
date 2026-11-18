@@ -5,6 +5,8 @@ Interactive single-task mode + 24/7 daemon mode (Stage 1).
 Now rebases onto the actual remote default branch to avoid merge conflicts.
 """
 
+import ast
+import shlex
 import subprocess
 import sys
 import ollama
@@ -485,10 +487,10 @@ def suggest_files(workspace, task, allowed_files):
     cleaned = re.sub(r'```(?:python)?\s*', '', cleaned)
     cleaned = re.sub(r'```', '', cleaned)
     try:
-        evaluated = eval(cleaned)
+        evaluated = ast.literal_eval(cleaned)  # parses list literals only, never runs code
         if isinstance(evaluated, list):
             files = [str(f) for f in evaluated if isinstance(f, str) and f.strip()]
-    except:
+    except (ValueError, SyntaxError):
         lines = raw.splitlines()
         for line in lines:
             line = line.strip().strip('"\',[] ')
@@ -537,7 +539,7 @@ def generate_changes(workspace, files, task, test_cmd, lint_cmd, max_attempts, a
             print(f"✏️ Updated {f}")
 
         if test_cmd:
-            test_result = subprocess.run(test_cmd, shell=True, cwd=workspace, capture_output=True, text=True)
+            test_result = subprocess.run(shlex.split(test_cmd), cwd=workspace, capture_output=True, text=True)
             if test_result.returncode != 0:
                 combined = test_result.stderr + test_result.stdout
                 if re.search(r"No module named|ModuleNotFoundError", combined):
@@ -553,7 +555,7 @@ def generate_changes(workspace, files, task, test_cmd, lint_cmd, max_attempts, a
             print("ℹ️ No test command, assuming success.")
 
         if lint_cmd:
-            lint_result = subprocess.run(lint_cmd, shell=True, cwd=workspace, capture_output=True, text=True)
+            lint_result = subprocess.run(shlex.split(lint_cmd), cwd=workspace, capture_output=True, text=True)
             if lint_result.returncode != 0:
                 print(f"⚠️ Lint issues (non-fatal): {lint_result.stdout[:300]}")
         return True
