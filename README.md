@@ -125,6 +125,14 @@ Other files (workspaces, logs, memory) are generated at runtime and not committe
 
 ---
 
+## Safety
+
+ADIE writes code with an LLM and then runs tests on it, so treat its output as untrusted:
+
+- The LLM's file suggestions are parsed with `ast.literal_eval`, which only accepts plain Python literals and never runs code.
+- Test and lint commands are run without a shell (`shlex.split`, no `shell=True`). Set them to a single command, e.g. `"pytest -q"`.
+- Run the agent inside a Docker container or VM with no access to your own files, and give the GitHub token access only to the repos it should change.
+
 ## Status and Roadmap
 
 | Milestone | Status |
